@@ -1,0 +1,5 @@
+Array
+(
+    [photo_field] => default.jpg
+    [photo_length] => 11
+)

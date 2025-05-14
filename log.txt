@@ -1,0 +1,5 @@
+Array
+(
+    [confirmation_id] => 6
+    [action] => refuser
+)

@@ -1,0 +1,115 @@
+/* styles.css */
+
+body {
+  font-family: 'Open Sans', sans-serif;
+  color: #4A4A4A;
+}
+h1, h2, h3 {
+  font-family: 'Montserrat', sans-serif;
+}
+/* Section hero avec image de fond */
+.header {
+  background: url('assets/images/road.jpg') no-repeat center center;
+  background-size: cover;
+  padding: 50px 0;
+  color: white;
+  text-align: center;
+}
+/* Style du formulaire de recherche */
+.search-form {
+  margin-top: 20px;
+}
+/* Footer */
+.footer {
+  background-color: #f8f9fa;
+  padding: 20px;
+  text-align: center;
+}
+footer a {
+  color: #3CB371 ;
+  text-decoration: none;
+}
+footer a:hover {
+  color: #2a9c62 ; 
+}
+/* Bouton personnalisé selon la charte */
+.btn-primary {
+  background-color: #3CB371;
+  border-color: #3CB371;
+}
+.btn-primary:hover {
+  background-color: #2a9c62;
+  border-color: #2a9c62;
+}
+header nav a {
+  color: #3CB371 ; 
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+header nav a:hover {
+  color: #2a9c62 ;
+}
+.about {
+  margin-top: 100px; /* Ajuste cette valeur selon l'espace désiré */
+}
+.navbar {
+  font-size: 16px;
+}
+
+.navbar .navbar-brand img {
+  max-width: 100px;
+}
+
+.navbar-nav .btn {
+  font-size: 14px;
+  padding: 5px 10px;
+  border-radius: 20px;
+}
+
+.navbar-nav .nav-link {
+  font-weight: 600;
+}
+
+body {
+  background-color: #f8f9fa;
+  font-family: 'Montserrat', sans-serif;
+}
+
+h2 {
+  font-weight: 700;
+  color: #343a40;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+}
+
+.table th {
+  background-color: #343a40;
+  color: white;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f2f2f2;
+}
+
+.btn-outline-warning {
+  border-color: #ffc107;
+  color: #ffc107;
+}
+
+.btn-outline-warning:hover {
+  background-color: #ffc107;
+  color: white;
+}
+
+.btn-outline-danger {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+  background-color: #dc3545;
+  color: white;
+}

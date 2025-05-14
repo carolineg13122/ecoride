@@ -1,0 +1,30 @@
+Array
+(
+    [sql] => SELECT 
+            t.id, t.depart, t.destination, t.date, t.prix, t.places, t.duree_minutes, t.chauffeur, t.photo, t.eco,
+            ROUND(AVG(CASE WHEN a.valide = 1 THEN a.note ELSE NULL END), 1) AS note_chauffeur
+        FROM trajets t
+        LEFT JOIN avis a ON a.trajet_id = t.id
+        WHERE LOWER(t.depart) LIKE LOWER(:depart)
+          AND LOWER(t.destination) LIKE LOWER(:destination)
+          AND t.date = :date
+          AND t.places > 0 GROUP BY t.id ORDER BY t.date ASC
+    [params] => Array
+        (
+            [:depart] => %aix%
+            [:destination] => %marseille%
+            [:date] => 2025-05-20
+        )
+
+    [GET] => Array
+        (
+            [depart] => aix
+            [destination] => marseille
+            [date] => 2025-05-20
+            [filtreEco] => 
+            [filtrePrix] => 
+            [filtreDuree] => 
+            [filtreNote] => 
+        )
+
+)
