@@ -1,24 +1,13 @@
 <?php
-if (!getenv("DATABASE_URL")) {
-    die("❌ DATABASE_URL non défini.");
-}
-
-$url = parse_url(getenv("DATABASE_URL"));
-
-$host = $url["host"];
-$dbname = ltrim($url["path"], "/");
-$user = $url["user"];
-$pass = $url["pass"];
-$port = $url["port"] ?? 5432;
+$host = "localhost";
+$dbname = "ecoride";
+$username = "root";  // Par défaut sous XAMPP / MAMP
+$password = "";  // Laisse vide sous XAMPP
 
 try {
-    $conn = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
-    // echo "✅ Connexion réussie à PostgreSQL !";
+    $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    echo "❌ Erreur de connexion : " . $e->getMessage();
-    exit;
+    die("Erreur de connexion : " . $e->getMessage());
 }
 ?>
