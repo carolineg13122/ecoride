@@ -2,7 +2,7 @@
 <footer class="footer text-center py-3">
   <p>
     Contactez-nous : <a href="mailto:contact@ecoride.fr">contact@ecoride.fr</a> |
-    <a href="mentions-legales.php">Mentions légales</a>
+    <a href="/mentions-legales.php">Mentions légales</a>
   </p>
 </footer>
 

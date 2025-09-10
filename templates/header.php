@@ -15,7 +15,7 @@ if (session_status() === PHP_SESSION_NONE) {
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <!-- style perso -->
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
 
@@ -23,8 +23,8 @@ if (session_status() === PHP_SESSION_NONE) {
 <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
   <div class="container">
     <!-- Logo -->
-    <a class="navbar-brand" href="index.php">
-      <img src="assets/images/logo_ecoride.jpg" alt="Logo EcoRide" style="max-width: 120px;">
+    <a class="navbar-brand" href="/index.php">
+      <img src="/assets/images/logo_ecoride.jpg" alt="Logo EcoRide" style="max-width: 120px;">
     </a>
 
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
@@ -39,30 +39,30 @@ if (session_status() === PHP_SESSION_NONE) {
         <?php if (isset($_SESSION['user_id'])): ?>
 
           <?php if ($_SESSION['role'] === 'admin'): ?>
-            <li class="nav-item"><a class="nav-link" href="dashboard_admin.php">🧭Dashboard Admin</a></li>
-            <li class="nav-item"><a class="nav-link" href="gerer_utilisateurs.php">👥 Gérer Utilisateurs</a></li>
-            <li class="nav-item"><a class="nav-link" href="gerer_employes.php">🧑‍💼 Gérer Employés</a></li>
-            <li class="nav-item"><a class="nav-link" href="historique_signalements.php">📜 Historique signalements</a><br>
-            <li class="nav-item"><a class="nav-link" href="statistiques.php">📊 Statistiques</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/accueil_admin.php">🧭Dashboard Admin</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/gerer_utilisateurs.php">👥 Gérer Utilisateurs</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/gerer_employes.php">🧑‍💼 Gérer Employés</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/historique_signalements.php">📜 Historique signalements</a><br>
+            <li class="nav-item"><a class="nav-link" href="/views/statistiques.php">📊 Statistiques</a></li>
 
           <?php elseif ($_SESSION['role'] === 'employe'): ?>
-            <li class="nav-item"><a class="nav-link" href="accueil_employe.php">🧭 Espace Employé</a></li>
-            <li class="nav-item"><a class="nav-link" href="espace_employe.php">🗣 Modérer Avis</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/accueil_employe.php">🧭 Espace Employé</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/espace_employe.php">🗣 Modérer Avis</a></li>
 
           <?php elseif ($_SESSION['role'] === 'utilisateur'): ?>
-            <li class="nav-item"><a class="nav-link" href="index.php">🏠 Accueil</a></li>
-            <li class="nav-item"><a class="nav-link" href="espace_utilisateur.php">🧭 Mon tableau de bord</a></li>
-            <li class="nav-item"><a class="nav-link" href="profil.php">👤 Mon Profil</a></li>
-            <li class="nav-item"><a class="btn btn-success btn-sm ml-2" href="ajouter_trajet.php">🚗 Publier un trajet</a></li>
+            <li class="nav-item"><a class="nav-link" href="/index.php">🏠 Accueil</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/espace_utilisateur.php">🧭 Mon tableau de bord</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/profil.php">👤 Mon Profil</a></li>
+            <li class="nav-item"><a class="btn btn-success btn-sm ml-2" href="/views/ajouter_trajet.php">🚗 Publier un trajet</a></li>
           <?php endif; ?>
 
-          <li class="nav-item"><a class="nav-link" href="deconnexion.php">🔓 Déconnexion</a></li>
+          <li class="nav-item"><a class="nav-link" href="/controllers/deconnexion.php">🔓 Déconnexion</a></li>
 
           <?php else: ?>  <!-- Si utilisateur non connecté -->
-            <li class="nav-item"><a class="nav-link" href="index.php">🏠 Accueil</a></li>
-            <li class="nav-item"><a class="nav-link" href="connexion.php">🔑 Connexion</a></li>
-            <li class="nav-item"><a class="nav-link" href="inscription.php">📝 Inscription</a></li>
-            <li class="nav-item"><a class="nav-link" href="contact.php">📬 Contact</a></li>
+            <li class="nav-item"><a class="nav-link" href="/index.php">🏠 Accueil</a></li>
+            <li class="nav-item"><a class="nav-link" href="/controllers/connexion.php">🔑 Connexion</a></li>
+            <li class="nav-item"><a class="nav-link" href="/controllers/inscription.php">📝 Inscription</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/contact.php">📬 Contact</a></li>
           <?php endif; ?>
 
       </ul>
