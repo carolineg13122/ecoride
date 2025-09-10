@@ -10,7 +10,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="../controllers/traiter_connexion.php" method="POST">
+    <form action="/controllers/traiter_connexion.php" method="POST">
         <div class="form-group">
             <label for="email">Adresse email</label>
             <input type="email" name="email" id="email" class="form-control" required>
@@ -26,5 +26,11 @@
 
     <p class="mt-3">Pas encore inscrit ? <a href="inscription.php">Inscrivez-vous ici</a></p>
 </div>
+<?php if (!empty($_SESSION['debug_login'])): ?>
+  <div class="alert alert-secondary">
+    <small><strong>Debug:</strong> <?= htmlspecialchars($_SESSION['debug_login']) ?></small>
+  </div>
+  <?php unset($_SESSION['debug_login']); ?>
+<?php endif; ?>
 
 <?php require_once("../templates/footer.php"); ?>

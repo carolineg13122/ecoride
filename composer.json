@@ -1,1 +1,16 @@
-{}
+{
+  "name": "ecoride/app",
+  "description": "Plateforme de covoiturage EcoRide",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "ext-pdo": "*",
+    "mongodb/mongodb": "^1.15",
+    "phpmailer/phpmailer": "^6.9"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  }
+}

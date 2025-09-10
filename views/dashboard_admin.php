@@ -2,146 +2,136 @@
 session_start();
 require_once("../config/database.php");
 
-// Vérification : seulement admin
+// Vérification : seul un admin peut accéder
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../controllers/connexion.php?message=Accès réservé aux administrateurs.");
     exit();
 }
+// Traitement du changement de rôle ou suspension
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    $user_id = $_POST['user_id'] ?? null;
+    $new_role = $_POST['new_role'] ?? null;
 
-// Récupérer les statistiques principales
-$total_users = $conn->query("SELECT COUNT(*) FROM users WHERE role = 'utilisateur'")->fetchColumn();
-$total_users2 = $conn->query("SELECT COUNT(*) FROM users WHERE role = 'utilisateur suspendu'")->fetchColumn();
-$total_employes = $conn->query("SELECT COUNT(*) FROM users WHERE role = 'employe'")->fetchColumn();
-$total_employes2 = $conn->query("SELECT COUNT(*) FROM users WHERE role = 'employé suspendu'")->fetchColumn();
-$total_trajets = $conn->query("SELECT COUNT(*) FROM trajets")->fetchColumn();
-$total_credits = $conn->query("SELECT COUNT(*) * 2 FROM trajets")->fetchColumn();
+    if ($action === 'changer_role' && $user_id && $new_role) {
+        $stmt = $conn->prepare("UPDATE users SET role = ? WHERE id = ?");
+        $stmt->execute([$new_role, $user_id]);
+    } elseif ($action === 'suspendre' && $user_id) {
+        $stmt = $conn->prepare("UPDATE users SET role = 'suspendu' WHERE id = ?");
+        $stmt->execute([$user_id]);
+    }
 
+    header("Location: ../views/gerer_employes.php?message=Employé suspendu");
+    exit();
+}
 
-// Récupérer données pour les graphiques
-$stmt = $conn->query("
-    SELECT DATE(date) as jour, COUNT(*) as nb_trajets
-    FROM trajets
-    GROUP BY jour
-    ORDER BY jour ASC
-");
-$trajets_par_jour = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$stmt = $conn->query("
-    SELECT DATE(date) as jour, COUNT(*) * 2 as credits_gagnes
-    FROM trajets
-    GROUP BY jour
-    ORDER BY jour ASC
-
-");
-$credits_par_jour = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Récupérer uniquement les employés
+$stmt = $conn->query("SELECT id, nom, email, role FROM users WHERE role = 'employe'");
+$employes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <?php require_once("../templates/header.php"); ?>
 
 <div class="container mt-5">
-    <h2>👑 Dashboard Administrateur</h2>
+    <h2>🧑‍💼 Gestion des employés</h2>
 
-    <!-- Cartes Statistiques -->
-    <div class="row text-center my-3">
-        <div class="col-md-3 mb-3">
-            <div class="card border-primary shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">👥 Utilisateurs</h5>
-                    <p class="card-text"><?= $total_users ?></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card border-success shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">🧑‍💼 Employés</h5>
-                    <p class="card-text"><?= $total_employes ?></p>
-                </div>
-            </div>
-        </div>
-            <div class="col-md-3 mb-3">
-            <div class="card border-primary shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">👥 Utilisateurs suspendus</h5>
-                    <p class="card-text"><?= $total_users2?></p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="card border-success shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">🧑‍💼 Employés suspendus</h5>
-                    <p class="card-text"><?= $total_employes2 ?></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card border-info shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">🚗 Trajets</h5>
-                    <p class="card-text"><?= $total_trajets ?></p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card border-warning shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">💳 Crédits Gagnés</h5>
-                    <p class="card-text"><?= $total_credits ?> crédits</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <?php if (isset($_GET['message'])): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($_GET['message']) ?></div>
+    <?php endif; ?>
 
-    <!-- Graphiques -->
-    <div class="row mt-5">
-        <div class="col-md-6">
-            <h4 class="text-center">📈 Trajets par Jour</h4>
-            <canvas id="trajetsChart"></canvas>
-        </div>
-        <div class="col-md-6">
-            <h4 class="text-center">💵 Crédits par Jour</h4>
-            <canvas id="creditsChart"></canvas>
-        </div>
-    </div>
+    <?php if (count($employes) === 0): ?>
+        <p class="text-muted">Aucun employé trouvé.</p>
+    <?php else: ?>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($employes as $employe): ?>
+                    <tr>
+                    <td><?= htmlspecialchars($employe['nom']) ?></td>
+                        <td><?= htmlspecialchars($employe['email']) ?></td>
+                        <td><?= htmlspecialchars($employe['role']) ?></td>
+                        <td>
+                            <!-- Changer de rôle -->
+                            <form method="POST" class="d-inline">
+                                <input type="hidden" name="user_id" value="<?= $employe['id'] ?>">
+                                <select name="new_role" class="form-select d-inline w-auto">
+                                    <option value="aucun"> </option>
+                                    <option value="utilisateur">Utilisateur</option>
+                                    <option value="employe">Employé</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                                <button type="submit" name="action" value="changer_role" class="btn btn-primary btn-sm">Changer rôle</button>
+                            </form>
+
+                            <!-- Suspendre le compte -->
+                            <form method="POST" class="d-inline">
+                                <input type="hidden" name="user_id" value="<?= $employe['id'] ?>">
+                                <button type="submit" name="action" value="suspendre" class="btn btn-danger btn-sm" onclick="return confirm('Confirmer la suspension ?')">Suspendre</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+   <?php endif; ?>
 </div>
+<?php
+// Récupérer uniquement les employés
+$stmt = $conn->query("SELECT id, nom, email, role FROM users WHERE role = 'employé suspendu'");
+$suspendus2 = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<div class="container mt-5">
+    <h2>🧑‍💼 Gestion des employés suspendus</h2>
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <?php if (isset($_GET['message'])): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($_GET['message']) ?></div>
+    <?php endif; ?>
 
-<script>
-    const labelsTrajets = <?= json_encode(array_column($trajets_par_jour, 'jour')) ?>;
-    const dataTrajets = <?= json_encode(array_column($trajets_par_jour, 'nb_trajets')) ?>;
+    <?php if (count($suspendus2) === 0): ?>
+        <p class="text-muted">Aucun utilisateur trouvé.</p>
+    <?php else: ?>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($suspendus2 as $suspendu): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($suspendu['nom']) ?></td>
+                        <td><?= htmlspecialchars($suspendu['email']) ?></td>
+                        <td><?= htmlspecialchars($suspendu['role']) ?></td>
+                        <td>
+                            <!-- Changer de rôle -->
+                            <form method="POST" class="d-inline">
+                                <input type="hidden" name="user_id" value="<?= $suspendu['id'] ?>">
+                                <select name="new_role" class="form-select d-inline w-auto">
+                                    <option value="aucun"></option>
+                                    <option value="utilisateur">Utilisateur</option>
+                                    <option value="employe">Employé</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                                <button type="submit" name="action" value="changer_role" class="btn btn-primary btn-sm">Changer rôle</button>
+                            </form>
 
-    const labelsCredits = <?= json_encode(array_column($credits_par_jour, 'jour')) ?>;
-    const dataCredits = <?= json_encode(array_column($credits_par_jour, 'credits_gagnes')) ?>;
-
-    new Chart(document.getElementById('trajetsChart'), {
-        type: 'line',
-        data: {
-            labels: labelsTrajets,
-            datasets: [{
-                label: 'Trajets / Jour',
-                data: dataTrajets,
-                borderColor: 'blue',
-                backgroundColor: 'lightblue'
-            }]
-        }
-    });
-
-    new Chart(document.getElementById('creditsChart'), {
-        type: 'bar',
-        data: {
-            labels: labelsCredits,
-            datasets: [{
-                label: 'Crédits gagnés / Jour',
-                data: dataCredits,
-                backgroundColor: 'lightgreen',
-                borderColor: 'green'
-            }]
-        }
-    });
-</script>
-
+                            
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>
 <?php require_once("../templates/footer.php"); ?>

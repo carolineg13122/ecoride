@@ -1,86 +1,66 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-require_once("config/database.php");
-header('Content-Type: application/json');
+declare(strict_types=1);
 
-$depart = $_GET['depart'] ?? '';
-$destination = $_GET['destination'] ?? '';
-$date = $_GET['date'] ?? '';
-$filtreEco = $_GET['filtreEco'] ?? '';
-$filtrePrix = $_GET['filtrePrix'] ?? '';
-$filtreDuree = $_GET['filtreDuree'] ?? '';
-$filtreNote = $_GET['filtreNote'] ?? '';
+ini_set('display_errors','1'); error_reporting(E_ALL);
+header('Content-Type: application/json; charset=UTF-8');
 
-// ✅ Vérification du format de la date (YYYY-MM-DD)
-if (!empty($date) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-    echo json_encode(['error' => 'Format de date invalide. Attendu : AAAA-MM-JJ.']);
-    exit();
+require_once __DIR__ . '/../config/database.php'; // <- important
+
+$src = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : $_GET;
+
+$depart      = trim($src['depart']      ?? '');
+$destination = trim($src['destination'] ?? '');
+$date        = trim($src['date']        ?? '');
+
+$filtreEco   = $src['filtreEco']   ?? '';
+$filtrePrix  = $src['filtrePrix']  ?? '';
+$filtreDuree = $src['filtreDuree'] ?? '';
+$filtreNote  = $src['filtreNote']  ?? '';
+
+if ($date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Format de date invalide. AAAA-MM-JJ attendu.']);
+    exit;
 }
-$sql = "SELECT 
-            t.id, t.depart, t.destination, t.date, t.prix, t.places, t.duree_minutes, t.chauffeur, t.photo, t.eco,
-            ROUND(AVG(CASE WHEN a.valide = 1 THEN a.note ELSE NULL END), 1) AS note_chauffeur
-        FROM trajets t
-        LEFT JOIN avis a ON a.trajet_id = t.id
-        WHERE LOWER(t.depart) LIKE LOWER(:depart)
-          AND LOWER(t.destination) LIKE LOWER(:destination)
-          AND t.date = :date
-          AND t.places > 0";
-
-$params = [
-    ':depart' => "%$depart%",
-    ':destination' => "%$destination%",
-    ':date' => $date
-];
-
-if ($filtreEco !== '') {
-    $sql .= " AND t.eco = :eco";
-    $params[':eco'] = $filtreEco;
-}
-if ($filtrePrix !== '') {
-    $sql .= " AND t.prix <= :prixmax";
-    $params[':prixmax'] = $filtrePrix;
-}
-if ($filtreDuree !== '') {
-    $sql .= " AND t.duree_minutes <= :dureemax";
-    $params[':dureemax'] = $filtreDuree;
-}
-
-$sql .= " GROUP BY t.id";
-
-if ($filtreNote !== '') {
-    $sql .= " HAVING note_chauffeur >= :note_min";
-    $params[':note_min'] = $filtreNote;
-}
-
-$sql .= " ORDER BY t.date ASC";
 
 try {
-    file_put_contents("debug.txt", print_r([
-        'sql' => $sql,
-        'params' => $params,
-        'GET' => $_GET
-    ], true));
-    
+    $sql = "
+        SELECT 
+            t.id, t.depart, t.destination, t.date, t.prix, t.places, t.duree_minutes, t.chauffeur, t.eco,
+            ROUND(AVG(CASE WHEN a.valide = 1 THEN a.note END), 1) AS note_chauffeur
+        FROM trajets t
+        LEFT JOIN avis a ON a.trajet_id = t.id
+        WHERE 1=1
+          AND LOWER(t.depart) LIKE LOWER(:depart)
+          AND LOWER(t.destination) LIKE LOWER(:destination)
+          AND t.statut = 'à_venir'
+          AND t.places > 0
+    ";
+    $params = [
+        ':depart'      => "%$depart%",
+        ':destination' => "%$destination%",
+    ];
+
+    if ($date !== '') { $sql .= " AND DATE(t.date) = :date"; $params[':date'] = $date; }
+    if ($filtreEco   !== '') { $sql .= " AND t.eco = :eco"; $params[':eco'] = (int)$filtreEco; }
+    if ($filtrePrix  !== '') { $sql .= " AND t.prix <= :prixmax"; $params[':prixmax'] = (float)$filtrePrix; }
+    if ($filtreDuree !== '') { $sql .= " AND t.duree_minutes <= :dureemax"; $params[':dureemax'] = (int)$filtreDuree; }
+
+    $sql .= " GROUP BY t.id";
+    if ($filtreNote !== '') { $sql .= " HAVING note_chauffeur >= :note_min"; $params[':note_min'] = (float)$filtreNote; }
+    $sql .= " ORDER BY t.date ASC";
+
     $stmt = $conn->prepare($sql);
     $stmt->execute($params);
-    $trajets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach ($trajets as &$t) {
-    // On n'inclut pas la photo du chauffeur dans la recherche
-    $t['photo_chauffeur'] = null;
-
-    
-        if (!isset($t['note_chauffeur'])) {
-            $t['note_chauffeur'] = 'N/A';
-        }
+    foreach ($rows as &$r) {
+        if ($r['note_chauffeur'] === null) $r['note_chauffeur'] = 'N/A';
     }
-    
-    
 
-    echo json_encode($trajets);
-} catch (PDOException $e) {
+    echo json_encode($rows, JSON_UNESCAPED_UNICODE);
+
+} catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode(['error' => 'Erreur serveur: '.$e->getMessage()]);
 }

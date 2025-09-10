@@ -1,99 +1,130 @@
-<?php 
-require_once("../config/database.php");
+<?php
+require_once __DIR__ . '/../config/database.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 // Vérifier que l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header("Location: ../controllers/connexion.php?message=Veuillez vous connecter pour réserver un trajet.");
+    header('Location: /controllers/connexion.php?message=' . urlencode('Veuillez vous connecter pour réserver un trajet.'));
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
-$trajet_id = $_POST['trajet_id'] ?? null;
+$user_id   = (int) $_SESSION['user_id'];
+$trajet_id = isset($_POST['trajet_id']) ? (int) $_POST['trajet_id'] : 0;
 
-if (!$trajet_id) {
-    die("❌ Erreur : aucun identifiant de trajet transmis.");
+if ($trajet_id <= 0) {
+    header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Trajet invalide.'));
+    exit();
 }
 
 try {
-    // Vérifier que le trajet existe et a des places disponibles
-    $stmt = $conn->prepare("SELECT places FROM trajets WHERE id = ?");
+    $conn->beginTransaction();
+
+    // Verrouillage de la ligne trajet pendant la réservation
+    $stmt = $conn->prepare("SELECT id, user_id AS chauffeur_id, statut, places, prix, date 
+                            FROM trajets WHERE id = ? FOR UPDATE");
     $stmt->execute([$trajet_id]);
     $trajet = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$trajet) {
-        die("❌ Erreur : ce trajet n'existe pas.");
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode("Ce trajet n'existe pas."));
+        exit();
     }
 
-    if ($trajet['places'] <= 0) {
-        die("❌ Erreur : plus de places disponibles pour ce trajet.");
+    if ((int)$trajet['chauffeur_id'] === $user_id) {
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Vous ne pouvez pas réserver votre propre trajet.'));
+        exit();
     }
 
-    // Vérifier que l'utilisateur n'a pas déjà réservé ce trajet
+    if (($trajet['statut'] ?? '') !== 'à_venir') {
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Ce trajet n’est plus réservable.'));
+        exit();
+    }
+
+    if ((int)$trajet['places'] <= 0) {
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Plus de places disponibles pour ce trajet.'));
+        exit();
+    }
+
+    // Déjà réservé ?
     $stmt = $conn->prepare("SELECT COUNT(*) FROM reservations WHERE user_id = ? AND trajet_id = ?");
     $stmt->execute([$user_id, $trajet_id]);
-    $dejaReserve = $stmt->fetchColumn();
-
-    if ($dejaReserve > 0) {
-        die("❌ Vous avez déjà réservé ce trajet.");
+    if ((int)$stmt->fetchColumn() > 0) {
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Vous avez déjà réservé ce trajet.'));
+        exit();
     }
 
-    // Vérifier que l'utilisateur a au moins 2 crédits
+    // Crédits suffisants ?
     $stmt = $conn->prepare("SELECT credits FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
-    $credits = $stmt->fetchColumn();
-
+    $credits = (int)$stmt->fetchColumn();
     if ($credits < 2) {
-        die("❌ Vous n'avez pas assez de crédits pour réserver ce trajet.");
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode("Crédits insuffisants (2 requis)."));
+        exit();
     }
 
-    // Insérer la réservation
+    // 1) Réservation
     $stmt = $conn->prepare("INSERT INTO reservations (user_id, trajet_id, date_reservation) VALUES (?, ?, NOW())");
     $stmt->execute([$user_id, $trajet_id]);
 
-    // Décrémenter les places restantes
-    $stmt = $conn->prepare("UPDATE trajets SET places = places - 1 WHERE id = ?");
+    // 2) –1 place (sécurisé)
+    $stmt = $conn->prepare("UPDATE trajets SET places = places - 1 WHERE id = ? AND places > 0");
     $stmt->execute([$trajet_id]);
+    if ($stmt->rowCount() === 0) {
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Plus de places disponibles.'));
+        exit();
+    }
 
-    // Déduire 2 crédits à l'utilisateur
-    $stmt = $conn->prepare("UPDATE users SET credits = credits - 2 WHERE id = ?");
+    // 3) –2 crédits (sécurisé)
+    $stmt = $conn->prepare("UPDATE users SET credits = credits - 2 WHERE id = ? AND credits >= 2");
     $stmt->execute([$user_id]);
+    if ($stmt->rowCount() === 0) {
+        $conn->rollBack();
+        header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Crédits insuffisants.'));
+        exit();
+    }
 
-    // 🔔 Simulation d’envoi d’e-mail au chauffeur
-    $stmt = $conn->prepare("SELECT u.email, u.prenom, u.nom FROM trajets t 
-    JOIN users u ON t.user_id = u.id 
-    WHERE t.id = ?");
+    // Infos chauffeur pour mail
+    $stmt = $conn->prepare("SELECT u.email, u.prenom, u.nom
+                            FROM trajets t JOIN users u ON t.user_id = u.id
+                            WHERE t.id = ?");
     $stmt->execute([$trajet_id]);
     $chauffeur = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    $conn->commit();
+
+    // Mail (best effort)
+    $info = "Réservation enregistrée ✅";
     if ($chauffeur && !empty($chauffeur['email'])) {
-    $to = $chauffeur['email'];
-    $subject = "🚗 Nouvelle réservation sur EcoRide";
-    $message = "Bonjour " . htmlspecialchars($chauffeur['prenom']) . " " . htmlspecialchars($chauffeur['nom']) . ",\n\n";
-    $message .= "Un passager vient de réserver une place pour votre trajet #" . $trajet_id . ".\n";
-    $message .= "Connectez-vous à votre compte pour consulter les détails.\n\n";
-    $message .= "Merci d'utiliser EcoRide 🚀";
-    $headers = "From: contact@ecoride.fr\r\n";
-    $headers .= "Content-Type: text/plain; charset=utf-8";
+        $to      = $chauffeur['email'];
+        $subject = "🚗 Nouvelle réservation sur EcoRide";
+        $message = "Bonjour {$chauffeur['prenom']} {$chauffeur['nom']}," . "\n\n"
+                 . "Un passager vient de réserver une place pour votre trajet #{$trajet_id}." . "\n"
+                 . "Connectez-vous à votre compte pour consulter les détails." . "\n\n"
+                 . "Merci d'utiliser EcoRide 🚀";
+        $headers = "From: contact@ecoride.fr\r\nContent-Type: text/plain; charset=utf-8";
 
-    // Envoi réel si serveur configuré, sinon simulation pour l'ECF
-    if (mail($to, $subject, $message, $headers)) {
-    $info = "✉️ Un e-mail a été envoyé au chauffeur.";
+        if (!@mail($to, $subject, $message, $headers)) {
+            $info .= " (e-mail non envoyé en local)";
+        } else {
+            $info .= " (e-mail envoyé au chauffeur)";
+        }
     } else {
-    $info = "✅ Réservation enregistrée. (e-mail non envoyé en local)";
-    }
-    } else {
-    $info = "✅ Réservation enregistrée. (aucune adresse e-mail disponible)";
+        $info .= " (aucun e-mail chauffeur)";
     }
 
-
-    // ✅ Redirection
-    header("Location: ../views/mes_reservations.php?message=" . urlencode($info));
+    header('Location: /views/mes_reservations.php?message=' . urlencode($info));
     exit();
 
-} catch (PDOException $e) {
-    die("❌ Erreur lors de la réservation : " . $e->getMessage());
+} catch (Throwable $e) {
+    if ($conn->inTransaction()) { $conn->rollBack(); }
+    header('Location: /views/details.php?id=' . $trajet_id . '&erreur=' . urlencode('Erreur lors de la réservation : ' . $e->getMessage()));
+    exit();
 }

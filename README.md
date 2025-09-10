@@ -28,7 +28,7 @@ $dbname = 'ecoride';
 $username = 'root';
 $password = '';
 ```
-6. Lancer l’application : [http://localhost/ecoride](http://localhost/ecoride)
+6. Lancer l’application : [http://localhost/ecoride](http://localhost/ecoride)http://localhost:8000/index.php
 
 ---
 ## ⚙️ Utilisation avec Docket (alternative à XAMPP)
@@ -79,7 +79,7 @@ ecoride/
 │   └── convert_mysql_to_pg.sql
 ├── dockerfile                 # Fichier de build Docker
 ├── docker-vompodr.yml         # (optionnel) configuration complémentaire
-├── composer.json              # Dépendances PHP (si utilisées)
+├── composer.json              # Dépendances PHP 
 ├── index.php                  # Page d’accueil
 ├── README.md
 └── docs/          

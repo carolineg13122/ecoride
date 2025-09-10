@@ -8,7 +8,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Requête
+// Requête : récupérer tous les signalements traités
 $stmt = $conn->prepare("
     SELECT 
         c.*, 
@@ -19,11 +19,12 @@ $stmt = $conn->prepare("
     JOIN users u ON c.id_passager = u.id
     JOIN trajets t ON c.id_trajet = t.id
     LEFT JOIN users e ON c.traite_par = e.id
-    WHERE c.statut = 'probleme' AND c.valide = 1
+    WHERE c.valide = 1
+      AND c.statut IN ('ok','rejete') 
     ORDER BY c.date_validation DESC
 ");
 $stmt->execute();
-$signalements = $stmt->fetchAll();
+$signalements = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <?php include '../templates/header.php'; ?>
@@ -43,33 +44,35 @@ $signalements = $stmt->fetchAll();
                     <th>Traité par</th>
                     <th>Date</th>
                     <th>Décision</th>
-
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($signalements as $s): ?>
                     <tr>
-                        <td><?= htmlspecialchars($s['depart']) ?> → <?= htmlspecialchars($s['destination']) ?> (<?= $s['date'] ?>)</td>
+                        <td><?= htmlspecialchars($s['depart']) ?> → <?= htmlspecialchars($s['destination']) ?> (<?= htmlspecialchars($s['date']) ?>)</td>
                         <td><?= htmlspecialchars($s['prenom_passager']) ?> <?= htmlspecialchars($s['nom_passager']) ?></td>
                         <td><?= nl2br(htmlspecialchars($s['commentaire'])) ?></td>
                         <td>
                             <?= $s['nom_employe'] && $s['prenom_employe']
-                                ? htmlspecialchars($s['prenom_employe']) . ' ' . htmlspecialchars($s['nom_employe'])
+                                ? htmlspecialchars($s['prenom_employe'] . ' ' . $s['nom_employe'])
                                 : 'Non identifié' ?>
                         </td>
-                        <td><?= date('d/m/Y H:i', strtotime($s['date_validation'])) ?></td>
+                        <td>
+                            <?= !empty($s['date_validation']) 
+                                ? date('d/m/Y H:i', strtotime($s['date_validation']))
+                                : '-' ?>
+                        </td>
                         <td>
                             <?php
                             if ($s['statut'] === 'ok') {
-                                echo '<span class="text-success fw-bold">Crédité</span>';
+                                echo '<span class="text-success fw-bold">✅ Crédité</span>';
                             } elseif ($s['statut'] === 'rejete') {
-                                echo '<span class="text-danger fw-bold">Non crédité</span>';
+                                echo '<span class="text-danger fw-bold">🚫 Non crédité</span>';
                             } else {
                                 echo '<span class="text-muted">Inconnu</span>';
                             }
                             ?>
                         </td>
-
                     </tr>
                 <?php endforeach; ?>
             </tbody>
