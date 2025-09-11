@@ -10,9 +10,8 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
     exit;
 }
 
-/* -----------------------------
-   Requêtes pour les graphiques
-   ----------------------------- */
+// Requêtes pour les graphiques
+  
 
 // NB: on force DATE(t.date) pour agréger par jour proprement.
 $stmt = $conn->query("
