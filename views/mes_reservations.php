@@ -2,7 +2,7 @@
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 require_once __DIR__ . '/../config/database.php';
 
-// Auth
+// Auth obligatoire
 if (!isset($_SESSION['user_id'])) {
     header('Location: /controllers/connexion.php?message=' . rawurlencode('Connectez-vous pour accéder à vos réservations.'));
     exit;
@@ -29,6 +29,7 @@ $reservations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 require_once __DIR__ . '/../templates/header.php';
 ?>
+
 <div class="container mt-5">
     <h2>🚗 Mes réservations</h2>
 
@@ -46,12 +47,20 @@ require_once __DIR__ . '/../templates/header.php';
         <?php foreach ($reservations as $res): ?>
             <?php
             $trajetId = (int)($res['id'] ?? 0); // id du trajet
-            $dateTrajetStr = $res['date'] ?? '';
-            $dateResaStr   = $res['date_reservation'] ?? '';
-            // Parsing dates en sécurité
-            $dateTrajet = $dateTrajetStr ? new DateTime($dateTrajetStr) : null;
-            $dateResa   = $dateResaStr   ? new DateTime($dateResaStr)   : null;
+            $dateTrajet = isset($res['date']) ? new DateTime($res['date']) : null;
+            $dateResa   = isset($res['date_reservation']) ? new DateTime($res['date_reservation']) : null;
+
+            // Trajet terminé ?
+            $trajet_termine = ($res['statut'] ?? '') === 'termine';
+
+            // Déjà évalué ?
+            $stmtC = $conn->prepare('SELECT COUNT(*) FROM avis WHERE utilisateur_id = ? AND trajet_id = ?');
+            $stmtC->execute([$user_id, $trajetId]);
+            $deja_note = (int)$stmtC->fetchColumn() > 0;
+
+            $maintenant = new DateTime();
             ?>
+
             <div class="card mb-3">
                 <div class="card-body">
                     <h5 class="card-title">
@@ -59,47 +68,32 @@ require_once __DIR__ . '/../templates/header.php';
                         <?= htmlspecialchars($res['destination'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                     </h5>
 
-                    <p><strong>Date du trajet :</strong>
-                        <?= htmlspecialchars($dateTrajet ? $dateTrajet->format('d/m/Y') : ($res['date'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
-                    </p>
-
-                    <p><strong>Réservé le :</strong>
-                        <?= htmlspecialchars($dateResa ? $dateResa->format('d/m/Y à H:i') : ($res['date_reservation'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
-                    </p>
-
-                    <p><strong>Chauffeur :</strong> <?= htmlspecialchars($res['chauffeur'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
-
-                    <p><strong>Véhicule :</strong>
-                        <?= htmlspecialchars(trim(($res['marque'] ?? '') . ' ' . ($res['modele'] ?? '')), ENT_QUOTES, 'UTF-8') ?>
+                    <p><strong>Date du trajet :</strong> <?= $dateTrajet ? $dateTrajet->format('d/m/Y') : '—' ?></p>
+                    <p><strong>Réservé le :</strong> <?= $dateResa ? $dateResa->format('d/m/Y à H:i') : '—' ?></p>
+                    <p><strong>Chauffeur :</strong> <?= htmlspecialchars($res['chauffeur'] ?? '—', ENT_QUOTES, 'UTF-8') ?></p>
+                    <p><strong>Véhicule :</strong> <?= htmlspecialchars(trim(($res['marque'] ?? '') . ' ' . ($res['modele'] ?? '')), ENT_QUOTES, 'UTF-8') ?>
                         <?php if (!empty($res['energie'])): ?>
                             (<?= htmlspecialchars($res['energie'], ENT_QUOTES, 'UTF-8') ?>)
                         <?php endif; ?>
                     </p>
 
-                    <?php
-                    // Vérifie si un avis/confirmation a déjà été laissé pour ce trajet
-                    $stmtC = $conn->prepare('SELECT COUNT(*) FROM confirmations WHERE id_trajet = ? AND id_passager = ?');
-                    $stmtC->execute([$trajetId, $user_id]);
-                    $deja_note = (int)$stmtC->fetchColumn() > 0;
-
-                    $maintenant = new DateTime();
-                    ?>
-
-                    <?php if ($dateTrajet && $dateTrajet < $maintenant): ?>
+                    <?php if ($trajet_termine): ?>
                         <?php if ($deja_note): ?>
                             <span class="text-success">✔️ Trajet déjà évalué</span>
                         <?php else: ?>
-                            <a href="/controllers/confirmer_covoiturage.php?id=<?= $trajetId ?>" class="btn btn-primary">📝 Déposer un avis</a>
+                            <a href="/views/laisser_avis.php?id=<?= $trajetId ?>" class="btn btn-success">📝 Déposer un avis</a>
                             <a href="/views/signaler_trajet.php?id=<?= $trajetId ?>" class="btn btn-danger ms-2">❌ Signaler un problème</a>
                         <?php endif; ?>
-                    <?php else: ?>
-                        <!-- Trajet à venir : bouton d’annulation de la réservation -->
+                    <?php elseif ($dateTrajet && $dateTrajet > $maintenant): ?>
+                        <!-- Trajet à venir : permettre l’annulation -->
                         <form action="/controllers/annuler_reservations.php" method="POST"
                               onsubmit="return confirm('Confirmer l\'annulation de cette réservation ?');"
                               class="d-inline-block">
                             <input type="hidden" name="reservation_id" value="<?= (int)($res['reservation_id'] ?? 0) ?>">
-                            <button type="submit" class="btn btn-danger">❌ Annuler</button>
+                            <button type="submit" class="btn btn-outline-danger">❌ Annuler</button>
                         </form>
+                    <?php else: ?>
+                        <span class="text-muted">⏳ En attente de validation du trajet</span>
                     <?php endif; ?>
                 </div>
             </div>

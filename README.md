@@ -31,7 +31,7 @@ $password = '';
 6. Lancer l’application : [http://localhost/ecoride](http://localhost/ecoride)http://localhost:8000/index.php
 
 ---
-## ⚙️ Utilisation avec Docket (alternative à XAMPP)
+## ⚙️ Utilisation avec Docker (alternative à XAMPP)
 Ce projet peut également être exécuté via un conteneur Docker, sans XAMPP.
 1.Construction de l’image
 Depuis le répertoire racine du projet (où se trouve le Dockerfile) :
@@ -78,7 +78,7 @@ ecoride/
 │   ├── ecoride_full.sql       # Script SQL
 │   └── convert_mysql_to_pg.sql
 ├── dockerfile                 # Fichier de build Docker
-├── docker-vompodr.yml         # (optionnel) configuration complémentaire
+├── docker-compose.yml         # configuration complémentaire
 ├── composer.json              # Dépendances PHP 
 ├── index.php                  # Page d’accueil
 ├── README.md

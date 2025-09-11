@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'employe') {
     exit();
 }
 
-// --- CSRF (doit venir de views/signalements_trajets.php)
+// --- CSRF
 if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_signalements']) 
     || !hash_equals($_SESSION['csrf_signalements'], $_POST['csrf_token'])) {
     header("Location: /views/signalements_trajets.php?message=" . rawurlencode("Session expirée, réessayez."));
@@ -25,7 +25,7 @@ if ($confirmation_id <= 0) {
     exit();
 }
 
-// --- Charger la confirmation et vérifier cohérence
+// --- Charger la confirmation
 $stmt = $conn->prepare("
     SELECT id, id_trajet, id_passager, statut, valide
     FROM confirmations
@@ -39,13 +39,13 @@ if (!$conf) {
     exit();
 }
 
-// Cohérence confirmation <-> trajet
+// Vérifie que le trajet correspond
 if ($trajet_id && (int)$conf['id_trajet'] !== $trajet_id) {
     header("Location: /views/signalements_trajets.php?message=" . rawurlencode("Incohérence de trajet."));
     exit();
 }
 
-// Déjà traitée ?
+// Déjà traité ?
 if ((int)$conf['valide'] === 1) {
     header("Location: /views/signalements_trajets.php?message=" . rawurlencode("Signalement déjà traité."));
     exit();
@@ -53,10 +53,10 @@ if ((int)$conf['valide'] === 1) {
 
 try {
     if ($action === 'refuser') {
-        // Marquer rejeté
+        // Rejeter le signalement : on considère que "valide = 1" + statut "valide" signifie "traité"
         $stmt = $conn->prepare("
             UPDATE confirmations
-            SET valide = 1, statut = 'rejeté_employé', traite_par = ?, date_validation = NOW()
+            SET valide = 1, statut = 'valide', traite_par = ?, date_validation = NOW()
             WHERE id = ?
         ");
         $stmt->execute([ (int)$_SESSION['user_id'], $confirmation_id ]);
@@ -71,7 +71,7 @@ try {
         exit();
     }
 
-    // Lire prix du trajet (source de vérité)
+    // Lire le prix du trajet
     $stmt = $conn->prepare("SELECT prix FROM trajets WHERE id = ?");
     $stmt->execute([$trajet_id]);
     $prix = $stmt->fetchColumn();
@@ -81,40 +81,36 @@ try {
         exit();
     }
 
-    // Nb passagers (réservations)
+    // Nombre de passagers
     $stmt = $conn->prepare("SELECT COUNT(*) FROM reservations WHERE trajet_id = ?");
     $stmt->execute([$trajet_id]);
     $nb_passagers = (int)$stmt->fetchColumn();
-
-    // Si tu préfères ne créditer que les passagers qui ont validé "ok":
-    // $stmt = $conn->prepare("SELECT COUNT(*) FROM confirmations WHERE id_trajet = ? AND statut = 'ok'");
-    // $stmt->execute([$trajet_id]);
-    // $nb_passagers = (int)$stmt->fetchColumn();
 
     $gain = (float)$prix * $nb_passagers;
 
     $conn->beginTransaction();
 
-    // Créditer
+    // Créditer le chauffeur
     $stmt = $conn->prepare("UPDATE users SET credits = credits + ? WHERE id = ?");
     $stmt->execute([ $gain, $chauffeur_id ]);
 
-    // Marquer la confirmation traitée (validée par employé)
+    // Marquer comme traité (statut = "valide")
     $stmt = $conn->prepare("
         UPDATE confirmations
-        SET valide = 1, statut = 'validé_employé', traite_par = ?, date_validation = NOW()
+        SET valide = 1, statut = 'valide', traite_par = ?, date_validation = NOW()
         WHERE id = ?
     ");
     $stmt->execute([ (int)$_SESSION['user_id'], $confirmation_id ]);
 
     $conn->commit();
 
-    header("Location: /views/signalements_trajets.php?message=" . rawurlencode("Chauffeur crédité (${gain} crédits)."));
+    header("Location: /views/signalements_trajets.php?message=" . rawurlencode("Chauffeur crédité ({$gain} crédits)."));
     exit();
 
 } catch (Throwable $e) {
     if ($conn->inTransaction()) { $conn->rollBack(); }
-    // En prod: log $e->getMessage()
-    header("Location: /views/signalements_trajets.php?message=" . rawurlencode("Erreur serveur, réessayez."));
+
+    // Affiche temporairement l'erreur pour debug
+    echo "<pre>💥 Erreur : " . $e->getMessage() . "</pre>";
     exit();
 }

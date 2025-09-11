@@ -24,6 +24,7 @@ $nom = $_SESSION['nom'] ?? 'Administrateur';
     <div class="mt-4">
         <a href="/views/gerer_utilisateurs.php" class="btn btn-primary mb-2">👥 Gérer les utilisateurs</a><br>
         <a href="/views/gerer_employes.php" class="btn btn-primary mb-2">🧑‍💼 Gérer les employés</a><br>
+        <a href="/views/historique_avis.php" class="btn btn-primary mb-2">📚 Historique des avis</a><br>
         <a href="/views/historique_signalements.php" class="btn btn-primary mb-2">📜 Historique signalements</a><br>
         <a href="/views/statistiques.php" class="btn btn-info mb-2">📈 Voir les statistiques</a><br>
         <a href="/controllers/deconnexion.php" class="btn btn-secondary">🔓 Se déconnecter</a>

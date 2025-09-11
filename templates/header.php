@@ -42,6 +42,7 @@ if (session_status() === PHP_SESSION_NONE) {
             <li class="nav-item"><a class="nav-link" href="/views/accueil_admin.php">🧭Dashboard Admin</a></li>
             <li class="nav-item"><a class="nav-link" href="/views/gerer_utilisateurs.php">👥 Gérer Utilisateurs</a></li>
             <li class="nav-item"><a class="nav-link" href="/views/gerer_employes.php">🧑‍💼 Gérer Employés</a></li>
+            <li class="nav-item"><a class="nav-link" href="/views/historique_avis.php">📜 Historique avis</a><br>
             <li class="nav-item"><a class="nav-link" href="/views/historique_signalements.php">📜 Historique signalements</a><br>
             <li class="nav-item"><a class="nav-link" href="/views/statistiques.php">📊 Statistiques</a></li>
 
