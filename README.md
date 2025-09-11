@@ -115,6 +115,23 @@ ecoride/
 - Fichier SQL structuré : `sql/ecoride_clean.sql`
 
 ---
+---
+
+## 🧪 Bonus : Simulation NoSQL (MongoDB)
+
+Pour répondre au référentiel du TP Développeur Web & Web Mobile, une simulation de base NoSQL a été intégrée.  
+Un script PHP (`simuler_nosql.php`) permet d’enregistrer des avis de trajets dans un fichier JSON (`nosql/avis.json`), comme le ferait une base MongoDB.
+
+**Exemple de structure JSON :**
+
+```json
+{
+  "utilisateur": "Caroline",
+  "trajet_id": 42,
+  "note": 5,
+  "commentaire": "Super chauffeur 👍",
+  "timestamp": "2025-09-11 14:00:00"
+}
 
 ## 👨‍💻 Auteur
 
