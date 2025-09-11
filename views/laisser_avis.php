@@ -56,8 +56,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $erreur = 'La note doit être entre 1 et 5.';
     } else {
         $stmt = $conn->prepare("
-            INSERT INTO avis (utilisateur_id, trajet_id, note, commentaire, valide, created_at)
-            VALUES (?, ?, ?, ?, 0, NOW())
+            INSERT INTO avis (utilisateur_id, trajet_id, note, commentaire, statut, created_at)
+            VALUES (?, ?, ?, ?, 'en_attente', NOW())
+
         ");
         $stmt->execute([$user_id, $trajet_id, $note, $commentaire]);
 

@@ -52,10 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erreur = "Le commentaire est trop long (2000 caractères max).";
         } else {
             // Enregistrer le signalement
-            $stmt = $conn->prepare("
-                INSERT INTO confirmations (id_trajet, id_passager, commentaire, statut, valide, created_at)
-                VALUES (?, ?, ?, 'probleme', 0, NOW())
-            ");
+$stmt = $conn->prepare("
+    INSERT INTO confirmations (id_trajet, id_passager, commentaire, statut, valide)
+    VALUES (?, ?, ?, 'probleme', 0)
+");
             $stmt->execute([$trajet_id, $user_id, $commentaire]);
 
             // Empêcher double POST

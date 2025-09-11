@@ -21,7 +21,6 @@ $sql = "
         c.commentaire,
         c.statut,
         c.valide,
-        c.created_at,
         u.nom  AS nom_passager,
         u.prenom AS prenom_passager,
         t.depart,
@@ -33,7 +32,7 @@ $sql = "
     JOIN users u ON c.id_passager = u.id
     JOIN trajets t ON c.id_trajet = t.id
     WHERE c.statut = 'probleme' AND c.valide = 0
-    ORDER BY c.created_at DESC
+    ORDER BY t.date DESC
 ";
 $stmt = $conn->query($sql);
 $signalements = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -52,7 +51,6 @@ require_once __DIR__ . '/../templates/header.php';
     <?php else: ?>
         <?php foreach ($signalements as $s): 
             $dateTrajet = !empty($s['date']) ? date('d/m/Y', strtotime($s['date'])) : '—';
-            $createdAt  = !empty($s['created_at']) ? date('d/m/Y H:i', strtotime($s['created_at'])) : '—';
         ?>
             <div class="card mb-4">
                 <div class="card-body">
@@ -68,7 +66,6 @@ require_once __DIR__ . '/../templates/header.php';
                         <?= htmlspecialchars($s['prenom_passager'] . ' ' . $s['nom_passager'], ENT_QUOTES, 'UTF-8') ?>
                     </p>
                     <p class="mb-1"><strong>Prix :</strong> <?= htmlspecialchars((string)$s['prix'], ENT_QUOTES, 'UTF-8') ?> crédits</p>
-                    <p class="mb-1"><strong>Signalé le :</strong> <?= $createdAt ?></p>
 
                     <div class="mt-3">
                         <strong>Commentaire :</strong><br>
