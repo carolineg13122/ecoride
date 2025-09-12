@@ -75,7 +75,7 @@ ecoride/
 ├── models/                    # (optionnel, à compléter si POO)
 ├── templates/                 # Header, footer
 ├── sql/
-│   ├── ecoride_full.sql       # Script SQL
+│   ├── ecoride_full.sql       #  SQL
 │   └── ecoride_clean.sql
 ├── dockerfile                 # Fichier de build Docker
 ├── docker-compose.yml         # configuration complémentaire
