@@ -75,8 +75,8 @@ ecoride/
 ├── models/                    # (optionnel, à compléter si POO)
 ├── templates/                 # Header, footer
 ├── sql/
-│   ├── ecoride_full.sql       # Script SQL
-│   └── convert_mysql_to_pg.sql
+│   ├── ecoride_full.sql       #  SQL
+│   └── ecoride_clean.sql
 ├── dockerfile                 # Fichier de build Docker
 ├── docker-compose.yml         # configuration complémentaire
 ├── composer.json              # Dépendances PHP 
